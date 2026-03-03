@@ -235,7 +235,7 @@ align-items: flex-start;
 const SendReportWrap = styled.div`
 display: flex;
 flex-direction: column;
-alighn-items: flex-end;
+align-items: flex-end;
 gap: 8px;
 `;
 
