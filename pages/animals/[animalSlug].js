@@ -31,7 +31,7 @@ const AnimalPage = () => {
       {animalData ? (
         <Content>
           <h2>{animalData.name}</h2>
-          <p>{animalData.description}</p>
+          <p>{animalData.habitat}</p>
           <Image src={animalData.image} alt={animalData.name} />
         </Content>
       ) : (
