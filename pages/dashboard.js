@@ -22,6 +22,9 @@ const Dashboard = () => {
 
   const budgetInputRef = useRef(null) // Ref for budget input field
 
+  /* When user logs in, we want to load their budget + expenses
+     We also want to fetch the exchange rates after the dashboard is accessed
+     If user is not logged in, redirect to login page */
   useEffect(() => {
     if (user) {
       loadUserData() // Load user data when component mounts or user changes
@@ -31,24 +34,32 @@ const Dashboard = () => {
     }
   }, [user])
   
+  /* Focus the budget input when the form is displayed 
+     When the form is showed, we want the cursor to automatically focus in the input field
+     We check "budgetInputRef.current" to make sure the element is mounted before calling focus() */
   useEffect(() => {
     if (showBudgetForm && budgetInputRef.current) {
       budgetInputRef.current.focus() // Focus the input when form is shown
     }
   }, [showBudgetForm])
 
+  // Data loading function
   function loadUserData(){
     getDocument('budgets', user.uid)
+    // If a budget doc exists, set the budget amount
     .then((data) => {
       if (data) {
         setBudget(data.amount)
       } 
+      // Chain the next fetch: get expenses doc
       return getDocument('expenses', user.uid)
     })
     .then((data) => {
+      // If expenses doc exists and has an "items" array, store it
       if(data && data.items){
         setExpenses(data.items)
       }
+      // Once both calls finish, set loading to false -> stop showing loading state UI
       setLoading(false)
     })
     .catch((error) => {
@@ -57,24 +68,23 @@ const Dashboard = () => {
     })
   }
 
+  // Function to save the user's budget to Firestore and update state
   function handleSetBudget() {
     const amount = parseFloat(budgetInput)
+    // Validation
     if (!amount || amount <= 0) {
       alert('Please enter a valid budget amount')
       return
     }
+    // Writes budgets/{userId} document with { amount, month, year }
     setDocument('budgets', user.uid, {
       amount: amount,
       month: new Date().getMonth(),
       year: new Date().getFullYear()
     })
     .then(() => {
-      setBudget(amount)
-      setShowBudgetForm(false)
-    })
-    .then(() => {
       console.log('Budget set successfully')
-      setBudget(amount)
+      setBudget(amount) // Update local state with new budget
       setShowBudgetForm(false)
       setBudgetInput('')
     })
@@ -83,15 +93,19 @@ const Dashboard = () => {
     })
   }
 
+  /* Loads currency exchange rates from a public API
+     Base currency is USD, Rates are stored in state for conversion and calculations*/
   function loadExchangeRate(){
     fetch('https://open.er-api.com/v6/latest/USD')
     .then((response) => {
+      // Validation to check if API call was successful
       if(!response.ok){
         throw new Error('Failed to fetch exchange rates')
       }
       return response.json()
     })
     .then((data) => {
+      // Only store rates if API response indicates success and contains rates data
       if(data.result === 'success' && data.rates){
         setExchangeRate(data.rates)
       }
@@ -104,8 +118,8 @@ const Dashboard = () => {
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0) // Calculate total spent from expenses
   const remaining = budget ? budget - totalSpent : 0 // Calculate remaining budget
 
+  // Builds an object mapping category -> total amount spent 
   const categoryTotals = {}
-
   expenses.forEach(expense => {
     if (categoryTotals[expense.category]) {
       categoryTotals[expense.category] += expense.amount
@@ -114,6 +128,7 @@ const Dashboard = () => {
     }
   })
 
+  // If we are still loading user data, show a loading UI instead of the dashboard
   if(loading){
     return (
       <Section>
@@ -126,14 +141,17 @@ const Dashboard = () => {
     <Section>
       <DashboardNavbar />
       <Content>
+        {/* If user has no budget and is not currently setting one, show empty state with button to set budget */}
         {!budget && !showBudgetForm && (
           <EmptyState>
             <EmptyTitle>No budget set yet</EmptyTitle>
             <EmptySubtitle>Set a monthly budget to start tracking your spending</EmptySubtitle>
+            {/* Clicking button toggles budget form */}
             <GreenButton onClick={() => setShowBudgetForm(true)}>Set Your Budget</GreenButton>
           </EmptyState>
         )}
 
+        {/* If form is toggled on, show the budget form */}
         {showBudgetForm && !budget && (
           <EmptyState>
             <EmptyTitle>Set Your Monthly Budget</EmptyTitle>
@@ -141,12 +159,15 @@ const Dashboard = () => {
             <BudgetInputGroup>
               <BudgetInput ref={budgetInputRef} type="number" placeholder="Enter budget amount" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)} />
             </BudgetInputGroup>
+            {/* Clicking button saves the budget to Firestore and updates state */}
             <GreenButton onClick={handleSetBudget}>Save Budget</GreenButton>
           </EmptyState>
         )}
 
+        {/* If a budget exists, show the main dashboard with budget overview, category breakdown, and recent expenses */}
         {budget && (
           <>
+          {/* Overview cards showing budget, total spent, and remaining amount */}
           <Grid>
             <Card>
               <CardLabel>Monthly Budget</CardLabel>
@@ -161,10 +182,12 @@ const Dashboard = () => {
               <CardValue>${remaining.toFixed(2)}</CardValue>
             </Card>
           </Grid>
+          {/*Currency conversion card - only show if exchange rates have loaded */}
           {exchangeRate && exchangeRate[selectedCurrency] && (
             <CurrencyCard>
               <CurrencyHeader>
                 <CurrencyTitle>Convert your spending</CurrencyTitle>
+                {/* Dropdown to select currency for conversion, updates selectedCurrency state */}
                 <CurrencySelect value={selectedCurrency} onChange={(e) => setSelectedCurrency(e.target.value)}>
                   <option value="EUR">EUR - Euro</option>
                   <option value="GBP">GBP - British Pound</option>
@@ -192,18 +215,21 @@ const Dashboard = () => {
               </CurrencyGrid>
             </CurrencyCard>
           )}
+          {/* Section showing spending by category with a button to add new expenses */}
           <SectionRow>
             <SectionTitle>Spending by Category</SectionTitle>
             <Link href="/expense" style={{ textDecoration: 'none' }}>
               <AddButton>Add New Expense</AddButton>
             </Link>
           </SectionRow>
+          {/* If there are no expenses, show an empty state. otherwise, show the category list */}
           {expenses.length === 0 ? (
             <EmptyExpense>
               <p>No expenses recorded yet. Start adding your spending!</p>
             </EmptyExpense>
           ) : (
             <CategoryList>
+              {/* .localCompare() sort categories alphabetically */}
               {Object.entries(categoryTotals).sort((a, b) => a[0].localeCompare(b[0])).map(([category, amount]) => (
                 <CategoryItem key={category}>
                   <CategoryName>{category}</CategoryName>

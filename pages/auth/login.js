@@ -15,9 +15,11 @@ const Login = () => {
 
   const router = useRouter()
 
-
+  // Function to handle user login
   async function handleLogin(){
+    // Attempt to sign in user using Firebase Authentication with email and password
     signInWithEmailAndPassword(auth, email, password)
+    // If login is successful, set the user in context and redirect to dashboard
     .then((userCredential) => {
         const user = userCredential.user;
         console.log(`User ${user.email} logged in successfully!`);

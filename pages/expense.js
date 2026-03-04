@@ -1,36 +1,43 @@
-import React, { useState, useRef, useEffect, use } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import styled from 'styled-components'
 import { useStateContext } from '@/context/StateContext'
 import { getDocument, setDocument } from '@/backend/Database'
 import { useRouter } from 'next/router'
 import DashboardNavbar from '@/components/Dashboard/DashboardNavbar'
-import { getDoc } from 'firebase/firestore'
 
 const AddExpense = () => {
     const { user } = useStateContext()
     const router = useRouter()
 
-    const [amount, setAmount] = useState('')
-    const [category, setCategory] = useState('')
-    const [description, setDescription] = useState('')
+    const [amount, setAmount] = useState('') // Amount input
+    const [category, setCategory] = useState('') // Category selection
+    const [description, setDescription] = useState('') // Short description of the expense
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]) // Default to today's date
 
     const amountRef = useRef(null)
-
+    // List of predefined categories for expenses 
     const categories = ['Food', 'Transportation', 'Education', 'Shopping', 'Utilities', 'Other']
 
+    // Redirect to home if user is not authenticated
     useEffect(() => {
         if(user===null){
             router.push('/')
         }
     }, [user])
 
+    // Focus the amount input field when the component mounts
     useEffect(() => {
         if (amountRef.current) {
             amountRef.current.focus()
         }
     }, [])
 
+    /* -Validates the form inputs before adding an expense
+       -Creates the expense object
+       -Reads existing expenses array from DB
+       -Appends new expense
+       -Writes updated array back to DB
+       -Redirects user back to dashboard */
     function handleAddExpense() {
         if(!user || !amount || !category || !description){
             alert("Please fill in all fields.")
@@ -67,18 +74,23 @@ const AddExpense = () => {
                 <FormCard>
                     <FormTitle>Add Expense</FormTitle>
                     <FormSubtitle>Fill in the details of your expense</FormSubtitle>
+                    {/* Amount input field */}
                     <Label>Amount</Label>
                     <InputGroup>
                         <InputAmount ref={amountRef} type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
                     </InputGroup>
+                    {/* Category selection buttons - highlight the selected category */}
                     <Label>Category</Label>
                     <CategoryGrid>
+                        {/* Map through predefined categories and create a button for each. The selected category is highlighted. */}
                         {categories.map((cat) => (
                             <CategoryBtn key={cat} selected={category === cat} onClick={() => setCategory(cat)}>{cat}</CategoryBtn>
                         ))}
                     </CategoryGrid>
+                    {/* Description input field */}
                     <Label>Description</Label>
                     <Input type="text" placeholder="Enter a description" value={description} onChange={(e) => setDescription(e.target.value)} />
+                    {/* Date input field */}
                     <Label>Date</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                     <SubmitButton onClick={handleAddExpense}>Add Expense</SubmitButton>

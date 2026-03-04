@@ -32,16 +32,23 @@ const Signup = () => {
     return true;
 }
 
+  // Function to handle user registration
   async function handleSignup(){
+    // Check if user agreed to terms and conditions
     if(!agreeTerms){
         alert('You must agree to the terms and conditions to sign up.');
         return;
     }
+    // Create a new user with email and password using Firebase Authentication
     createUserWithEmailAndPassword(auth, email, password)
+    // If registration is successful, set the user in context and redirect to dashboard
     .then((userCredential) => {
         const user = userCredential.user;
         console.log(`User ${user.email} registered successfully!`);
+        // Save user in global state
         setUser(user);
+        // Store additional user information in Firestore database
+        // Collection: users, Document ID: user.uid, Data: { fullName, email }
         setDocument('users', user.uid, {
             fullName: fullName,
             email: email,
@@ -68,7 +75,7 @@ const Signup = () => {
             <BrandName>StudentSpend</BrandName>
           </Link>
           <FormTitle>Create Your Account</FormTitle>
-          <FormSubtitle>Start for free</FormSubtitle>
+          <FormSubtitle>Join us today and take control of your finances!</FormSubtitle>
 
           <InputGroup>
             <Input type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />

@@ -7,16 +7,17 @@ import { useRouter } from 'next/router'
 import DashboardNavbar from '@/components/Dashboard/DashboardNavbar'
 
 const Reports = () => {
-    const { user, userName } = useStateContext()
+    const { user, userName } = useStateContext() // Get user and userName(Full Name) from global state context
     const router = useRouter()
 
-    const [budget, setBudget] = useState(null)
-    const [expenses, setExpenses] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [sendStatus, setSendStatus] = useState('')
+    const [budget, setBudget] = useState(null) // Monthly budget amount
+    const [expenses, setExpenses] = useState([]) // Array of expense objects with properties: id, amount, category, description, date
+    const [loading, setLoading] = useState(true) // Loading state for data fetching
+    const [sendStatus, setSendStatus] = useState('') // Tracks email sending status
 
     const topCategoryRef = useRef(null)
 
+    // On component mount, check if user is authenticated. If yes, load report data. If not, redirect to home page.
     useEffect(() => {
         if(user){
             loadReportData()
@@ -25,13 +26,16 @@ const Reports = () => {
         }
     }, [user])
 
+    // After loading is complete, if there is a top spending category, scroll it into view for the user to see immediately.
     useEffect(() => {
         if(!loading && topCategoryRef.current){
             topCategoryRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
         }
     }, [loading])
 
-    function loadReportData() {
+    // Function to load data from DB
+    // Fetch budget document for the user. If it exists, set the budget state. Then fetch expenses document and set expenses state. Handle any errors that occur during this process.
+    function loadReportData() {  
         getDocument('budgets', user.uid)
         .then((data) => {
             if(data){
@@ -51,10 +55,13 @@ const Reports = () => {
         })
     }
 
+    // Function to send the report via email using EmailJS service. 
     function sendReport(){
+        // Show sending status in UI
         setSendStatus('Sending')
+        // Calculate the total spent
         const total = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-
+        // Build category totals object
         const catTotals = {}
         expenses.forEach((expense) => {
             if(catTotals[expense.category]){
@@ -63,11 +70,12 @@ const Reports = () => {
                 catTotals[expense.category] = expense.amount
             }
         })
-
+        /* Convert category totals into formatted string
+           E.g. Food: $100.00 (50%) */
         const categoriesText = Object.entries(catTotals)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => b[1] - a[1]) // Sort categories by amount spent in descending order
         .map(([cat, amt]) => cat + ': $' + amt.toFixed(2) + ' (' + ((amt / total) * 100).toFixed(0) + '%)').join('\n')
-
+        // EmailJS template parameters - these will be used to populate the email template with dynamic data
         const templateParams = {
             to_email: user.email,
             to_name: userName || 'User',
@@ -75,7 +83,7 @@ const Reports = () => {
             total_expenses: expenses.length.toString(),
             categories: categoriesText
         }
-
+        // Send the email using EmailJS. Handle success and error cases to update the sendStatus state accordingly, which provides feedback to the user in the UI.
         emailjs.send(process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID, process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID, templateParams, process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY)
 
         .then(() => {
@@ -89,10 +97,12 @@ const Reports = () => {
         })
     }
 
+    // Analytics and Insights Calculations
     const totalSpent = expenses.reduce((total, expense) => total + expense.amount, 0)
     const remainingBudget = budget ? budget - totalSpent : 0
     const averagePerExpense = expenses.length > 0 ? totalSpent / expenses.length : 0
 
+    // Build object mapping category -> total amount
     const categoryTotals = {}
     expenses.forEach((expense) => {
         if(categoryTotals[expense.category]){
@@ -102,9 +112,10 @@ const Reports = () => {
         }
     })
 
-    const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])
-    const topCategory = sortedCategories.length > 0 ? sortedCategories[0] : null
+    const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]) // Sort categories by total spent in descending order
+    const topCategory = sortedCategories.length > 0 ? sortedCategories[0] : null // Get the top spending category
 
+    // Build object mapping date -> total amount spent on that date
     const dailyTotals = {}
     expenses.forEach((expense) => {
         if(dailyTotals[expense.date]){
@@ -114,8 +125,8 @@ const Reports = () => {
         }
     })
 
-    const sortedDailyTotals = Object.entries(dailyTotals).sort((a, b) => b[1] - a[1])
-    const topDay = sortedDailyTotals.length > 0 ? sortedDailyTotals[0] : null
+    const sortedDailyTotals = Object.entries(dailyTotals).sort((a, b) => b[1] - a[1]) // Sort days by total spent in descending order
+    const topDay = sortedDailyTotals.length > 0 ? sortedDailyTotals[0] : null // Get the day with the highest spending
 
     if(loading){
         return (

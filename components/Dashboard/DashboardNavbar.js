@@ -7,9 +7,10 @@ import { auth } from '@/backend/Firebase'
 import { signOut } from 'firebase/auth'
 
 const DashboardNavbar = () => {
-  const { user, userName } = useStateContext()
+  const { user, userName } = useStateContext() // Access user and userName (Full Name) from context
   const router = useRouter()
 
+  // Handle user logout by signing out from Firebase Auth and redirecting to home page
   function handleLogout() {
     signOut(auth)
       .then(() => {
@@ -23,7 +24,9 @@ const DashboardNavbar = () => {
 
   return (
     <Nav>
+        {/* Left side of the navbar with brand name and navigation links */}
         <NavLeft>
+            {/* Brand name that links to the dashboard home */}
             <BrandName href="/dashboard">StudentSpend</BrandName>
             <NavLinks>
                 <NavItem href="/dashboard" $active={router.pathname ==='/dashboard'}>Dashboard</NavItem>
@@ -31,6 +34,7 @@ const DashboardNavbar = () => {
                 <NavItem href="/reports" $active={router.pathname ==='/reports'}>Reports</NavItem>
             </NavLinks>
         </NavLeft>
+        {/* Right side of the navbar showing user's name and logout button */}
         <NavRight>
             <UserName>{userName || user?.email}</UserName>
             <LogOutButton onClick={handleLogout}>Log Out</LogOutButton>

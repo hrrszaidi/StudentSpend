@@ -13,9 +13,7 @@ const Hero = () => {
               Welcome to your budget, <Highlight>Student.</Highlight>
             </Header>
 
-              <SubHeader>
-                Telur dadar, Telur Mata, Telur Rebus, Telur Aku
-              </SubHeader>
+              <SubHeader>Student Budgeting Made Simple</SubHeader>
                 <CTAButton href="/auth/signup">Get Started</CTAButton>
           </HeroTextColumn>
           <ImageColumn>
